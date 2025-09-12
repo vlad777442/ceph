@@ -1,0 +1,294 @@
+# Research Ontology Configuration for Georgia State University
+# This file defines the knowledge base for ontology-aware access control
+
+ontology:
+  version: "1.0"
+  university: "Georgia State University"
+  namespace: "https://research.gsu.edu/ontology/"
+  
+domains:
+  computer_science:
+    name: "Computer Science"
+    department: "Computer Science"
+    data_types:
+      - "source_code"
+      - "datasets"
+      - "algorithms"
+      - "research_papers"
+      - "experimental_results"
+    classification_levels:
+      - "PUBLIC"
+      - "INTERNAL" 
+      - "CONFIDENTIAL"
+  
+  biology:
+    name: "Biology"
+    department: "Biology"
+    data_types:
+      - "genomic_data"
+      - "experimental_data"
+      - "microscopy_images"
+      - "lab_notebooks"
+      - "specimen_data"
+    classification_levels:
+      - "PUBLIC"
+      - "INTERNAL"
+      - "CONFIDENTIAL"
+      - "RESTRICTED"  # for sensitive biological data
+  
+  chemistry:
+    name: "Chemistry"
+    department: "Chemistry"
+    data_types:
+      - "molecular_structures"
+      - "experimental_data"
+      - "synthesis_protocols"
+      - "safety_data"
+    classification_levels:
+      - "PUBLIC"
+      - "INTERNAL"
+      - "CONFIDENTIAL"
+  
+  physics:
+    name: "Physics"
+    department: "Physics and Astronomy"
+    data_types:
+      - "experimental_data"
+      - "simulation_results"
+      - "telescope_data"
+      - "theoretical_models"
+    classification_levels:
+      - "PUBLIC"
+      - "INTERNAL"
+      - "CONFIDENTIAL"
+
+roles:
+  professor:
+    level: "faculty"
+    permissions:
+      - "read_all_department_data"
+      - "write_own_projects"
+      - "manage_student_projects"
+      - "approve_collaborations"
+      - "access_confidential_data"
+    
+  associate_professor:
+    level: "faculty"
+    permissions:
+      - "read_all_department_data"
+      - "write_own_projects"
+      - "manage_student_projects"
+      - "approve_collaborations"
+      - "access_confidential_data"
+  
+  assistant_professor:
+    level: "faculty"
+    permissions:
+      - "read_all_department_data"
+      - "write_own_projects"
+      - "manage_student_projects"
+      - "access_confidential_data"
+  
+  postdoc:
+    level: "researcher"
+    permissions:
+      - "read_department_public_data"
+      - "read_assigned_projects"
+      - "write_assigned_projects"
+      - "access_internal_data"
+  
+  phd_student:
+    level: "graduate_student"
+    permissions:
+      - "read_department_public_data"
+      - "read_advisor_projects"
+      - "write_assigned_projects"
+      - "access_internal_data"
+  
+  masters_student:
+    level: "graduate_student"
+    permissions:
+      - "read_department_public_data"
+      - "read_assigned_projects"
+      - "write_assigned_projects"
+  
+  undergraduate_student:
+    level: "student"
+    permissions:
+      - "read_public_data"
+      - "write_personal_space"
+      - "read_course_materials"
+  
+  external_collaborator:
+    level: "external"
+    permissions:
+      - "read_collaboration_projects"
+      - "write_collaboration_projects"
+    restrictions:
+      - "require_approval"
+      - "limited_time_access"
+
+projects:
+  # Example research projects
+  ai_healthcare:
+    id: "AI-HEALTH-2024-001"
+    title: "AI Applications in Healthcare Diagnostics"
+    principal_investigator: "dr.smith@gsu.edu"
+    department: "computer_science"
+    domain: "computer_science"
+    classification: "CONFIDENTIAL"
+    participants:
+      - "dr.smith@gsu.edu"
+      - "phd.student1@gsu.edu"
+      - "masters.student2@gsu.edu"
+    external_collaborators:
+      - institution: "Emory University"
+        researchers: ["external.researcher@emory.edu"]
+    data_types:
+      - "medical_imaging_data"
+      - "ai_models"
+      - "patient_data_anonymized"
+    
+  climate_modeling:
+    id: "CLIMATE-PHYS-2024-002"
+    title: "Climate Change Modeling Using Atmospheric Data"
+    principal_investigator: "dr.jones@gsu.edu"
+    department: "physics"
+    domain: "physics"
+    classification: "INTERNAL"
+    participants:
+      - "dr.jones@gsu.edu"
+      - "postdoc.researcher@gsu.edu"
+      - "phd.student3@gsu.edu"
+    data_types:
+      - "atmospheric_data"
+      - "simulation_results"
+      - "climate_models"
+
+collaborations:
+  emory_partnership:
+    partner_institution: "Emory University"
+    type: "research_collaboration"
+    approved_by: "research.office@gsu.edu"
+    approval_date: "2024-01-15"
+    expiry_date: "2026-01-15"
+    projects:
+      - "AI-HEALTH-2024-001"
+    data_sharing_level: "CONFIDENTIAL"
+  
+  cdc_collaboration:
+    partner_institution: "Centers for Disease Control"
+    type: "government_collaboration"
+    approved_by: "compliance.office@gsu.edu"
+    approval_date: "2024-02-01"
+    expiry_date: "2025-02-01"
+    projects:
+      - "PUBLIC-HEALTH-2024-003"
+    data_sharing_level: "RESTRICTED"
+    special_requirements:
+      - "background_check_required"
+      - "data_use_agreement"
+
+access_patterns:
+  # Define how ontology maps to file system paths
+  research_data:
+    pattern: "/research/{domain}/{project_id}/{classification}/"
+    permissions:
+      - path: "/research/{user.department}/*"
+        condition: "user.level == 'faculty'"
+        access: "rw"
+      - path: "/research/{domain}/{project_id}/PUBLIC/*"
+        condition: "user.department == domain"
+        access: "r"
+      - path: "/research/{domain}/{project_id}/INTERNAL/*"
+        condition: "user.department == domain AND user.level in ['faculty', 'graduate_student', 'researcher']"
+        access: "r"
+      - path: "/research/{domain}/{project_id}/CONFIDENTIAL/*"
+        condition: "user in project.participants OR user.role == 'professor'"
+        access: "rw"
+      - path: "/research/{domain}/{project_id}/RESTRICTED/*"
+        condition: "user in project.participants AND user.clearance_level >= 'RESTRICTED'"
+        access: "rw"
+  
+  collaboration_data:
+    pattern: "/collaboration/{project_id}/{partner_institution}/"
+    permissions:
+      - path: "/collaboration/{project_id}/*"
+        condition: "user in project.participants AND collaboration.approved == true"
+        access: "rw"
+      - path: "/collaboration/{project_id}/*"
+        condition: "user.institution == partner_institution AND collaboration.approved == true"
+        access: "rw"
+  
+  shared_resources:
+    pattern: "/shared/{department}/"
+    permissions:
+      - path: "/shared/{department}/public/*"
+        condition: "user.department == department"
+        access: "r"
+      - path: "/shared/{department}/internal/*"
+        condition: "user.department == department AND user.level in ['faculty', 'graduate_student', 'researcher']"
+        access: "r"
+      - path: "/shared/{department}/faculty/*"
+        condition: "user.department == department AND user.level == 'faculty'"
+        access: "rw"
+
+data_governance:
+  retention_policies:
+    PUBLIC: "permanent"
+    INTERNAL: "7_years"
+    CONFIDENTIAL: "5_years"
+    RESTRICTED: "3_years_then_review"
+  
+  audit_requirements:
+    CONFIDENTIAL: "full_audit"
+    RESTRICTED: "full_audit"
+    INTERNAL: "access_audit"
+    PUBLIC: "minimal_audit"
+  
+  backup_requirements:
+    RESTRICTED: "encrypted_offsite"
+    CONFIDENTIAL: "encrypted_local"
+    INTERNAL: "standard_backup"
+    PUBLIC: "standard_backup"
+
+compliance:
+  regulations:
+    - name: "FERPA"
+      applies_to: ["student_data"]
+      requirements: ["access_logging", "encryption_at_rest"]
+    - name: "HIPAA"
+      applies_to: ["medical_data", "patient_data"]
+      requirements: ["access_logging", "encryption_at_rest", "encryption_in_transit", "audit_trail"]
+    - name: "IRB"
+      applies_to: ["human_subjects_data"]
+      requirements: ["approval_required", "consent_documentation"]
+    - name: "ITAR"
+      applies_to: ["export_controlled_data"]
+      requirements: ["citizenship_verification", "special_approval"]
+
+# Integration points with university systems
+integrations:
+  banner_sis:
+    enabled: true
+    api_endpoint: "https://banner.gsu.edu/api"
+    attributes:
+      - "student_status"
+      - "enrollment_status"
+      - "degree_program"
+  
+  research_administration:
+    enabled: true
+    api_endpoint: "https://research.gsu.edu/api"
+    attributes:
+      - "active_grants"
+      - "project_assignments"
+      - "collaboration_approvals"
+  
+  hr_system:
+    enabled: true
+    api_endpoint: "https://hr.gsu.edu/api"
+    attributes:
+      - "employment_status"
+      - "department_affiliation"
+      - "clearance_level"
